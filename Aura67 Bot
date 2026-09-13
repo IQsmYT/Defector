@@ -1,0 +1,64 @@
+export default function bot({ history }) {
+    if (history.length === 0) return ["C", null];
+
+    const opponent = history.map(round => round.opponent);
+    const recentDefections = opponent.slice(-8).filter(move => move === "D").length;
+    const totalDefections = opponent.filter(move => move === "D").length;
+
+    let   coopAfterC =  0;
+    let   defectAfterC = 0;
+    let   coopAfterD =  0;
+    let   defectAfterD = 0;
+
+    //How the opponent hasresponded to our previous moves
+    for (let i = 1; i < history.length; i++) {
+        const ourPreviousMove = history[i - 1].you;
+        const theirMove = history[i].opponent;
+
+        if (ourPreviousMove === "C") {
+            if (theirMove === "C") coopAfterC++;
+            else defectAfterC++;
+        } else {
+            if (theirMove === "C") coopAfterD++;
+            else defectAfterD++;
+        }
+    }
+
+    const chanceCooperationAfterC =
+        (coopAfterC + 1) / (coopAfterC + defectAfterC + 2);
+
+    const chanceCooperationAfterD =
+        (coopAfterD + 1) / (coopAfterD + defectAfterD + 2);
+
+    const timesWeDefected = coopAfterC + defectAfterC;
+    const defectionRate = totalDefections / history.length;
+    const lastMove = opponent[opponent.length - 1];
+
+    // Clearly hostile Opponent response on defending always
+    if (
+        recentDefections >= 5 ||
+        (history.length >= 10 && defectionRate > 0.6)
+    ) {
+        return ["D", null];
+    }
+
+    // When opponent  is forgiving: takeing advantage of their cooperation
+    if (
+        timesWeDefected >= 3 &&
+        chanceCooperationAfterD >= 0.8 &&
+        chanceCooperationAfterC >= 0.7
+    ) {
+        return ["D", null];
+    }
+
+    // Retaliating one time against a defection
+    if (lastMove === "D") {
+        return ["D", null];
+    }
+
+    // Keeping beneficial cooperations alive
+    return ["C", null];
+}
+
+
+// 
