@@ -1,0 +1,87 @@
+export default function bot({ history, memory }) {
+  const round = history.length;
+
+  memory = memory ?? {
+    mode: "normal",
+    probeAt: 9 + Math.floor(Math.random() * 7), // rounds 9–15
+    probeDone: false,
+    recoveryRounds: 0
+  };
+
+  if (round === 0) return ["C", memory];
+
+  const opponent = history.map(move => move.opponent);
+  const lastOpponentMove = opponent[round - 1];
+
+  const totalDefections = opponent.filter(move => move === "D").length;
+  const recentDefections = opponent.slice(-8).filter(move => move === "D").length;
+  const defectionRate = totalDefections / round;
+
+  // Once clearly hostile, never donate points again.
+  if (
+    memory.mode === "defend" ||
+    recentDefections >= 5 ||
+    (round >= 10 && defectionRate > 0.6)
+  ) {
+    memory.mode = "defend";
+    return ["D", memory];
+  }
+
+  // Farm a confirmed weak bot.
+  if (memory.mode === "farming") {
+    if (lastOpponentMove === "C") {
+      return ["D", memory];
+    }
+
+    // They started fighting back: stop farming and attempt recovery.
+    memory.mode = "recovery";
+    memory.recoveryRounds = 2;
+  }
+
+  // Give a normal reciprocal bot two clear cooperative signals.
+  if (memory.mode === "recovery") {
+    memory.recoveryRounds--;
+
+    if (lastOpponentMove === "C") {
+      memory.mode = "normal";
+      return ["C", memory];
+    }
+
+    if (memory.recoveryRounds > 0) {
+      return ["C", memory];
+    }
+
+    memory.mode = "defend";
+    return ["D", memory];
+  }
+
+  // One unpredictable test defect.
+  if (!memory.probeDone && round === memory.probeAt) {
+    memory.mode = "probe";
+    return ["D", memory];
+  }
+
+  // Immediate apology after the test.
+  if (memory.mode === "probe") {
+    memory.mode = "check";
+    return ["C", memory];
+  }
+
+  // Did they punish our test defect?
+  if (memory.mode === "check") {
+    memory.probeDone = true;
+
+    // They stayed cooperative after our betrayal: farm them.
+    if (lastOpponentMove === "C") {
+      memory.mode = "farming";
+      return ["D", memory];
+    }
+
+    // They retaliated: they are not weak, restore cooperation.
+    memory.mode = "normal";
+    return ["C", memory];
+  }
+
+  // Normal reciprocal play.
+  return [lastOpponentMove, memory];
+}
