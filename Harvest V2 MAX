@@ -1,0 +1,50 @@
+export default function bot(state) {
+  const history = state?.history || [];
+  const memory = state?.memory || { farming: false };
+  const round = history.length;
+
+  if (round === 0) return ["C", memory];
+
+  const oppLast = history[round - 1].opponent;
+  const myLast = history[round - 1].you;
+
+  if (memory.farming) {
+    if (oppLast === "D") {
+      memory.farming = false;
+    } else {
+      return ["D", memory];
+    }
+  }
+
+  if (round === 10) return ["D", memory];
+  if (round === 11) return ["C", memory];
+
+  if (round === 12) {
+    if (history[11].opponent === "C") {
+      memory.farming = true;
+      return ["D", memory];
+    }
+
+    return ["C", memory];
+  }
+
+  if (
+    round >= 3 &&
+    myLast === "D" &&
+    oppLast === "D" &&
+    history[round - 2].you === "D" &&
+    history[round - 2].opponent === "D"
+  ) {
+    let oppTotalD = 0;
+
+    for (let i = 0; i < round; i++) {
+      if (history[i].opponent === "D") oppTotalD++;
+    }
+
+    if (oppTotalD / round <= 0.5) {
+      return ["C", memory];
+    }
+  }
+
+  return [oppLast, memory];
+}
